@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lalas Doceria</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Lalas Doceria</h1>
+
+<div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+<button onclick="mudarAba('calculadora')" style="width: auto; background-color: #89faa6; padding: 10px 20px;">Calculadora de Receitas</button>
+<button onclick="mudarAba('dashboard')" style="width: auto; background-color: #89faa6; padding: 10px 20px;">Dashboard da Doceria</button>
+</div>
+
+<div id="aba-calculadora" class="container-abas">
+<div id="container-principal">
+
+<div class="card">
+<h2>1. Adicionar Ingrediente</h2>
+<div class="space-y-3">
+<div>
+<label>Nome (Ex: Leite Condensado):</label>
+<input type="text" id="ingNome">
+</div>
+<div>
+<label>Preço da Embalagem Fechada (R$):</label>
+<input type="number" id="ingPreco" value="6.00">
+</div>
+<div>
+<label>Peso/Volume Total da Embalagem (g ou ml):</label>
+<input type="number" id="ingPesoTotal" value="395">
+</div>
+<div>
+<label>Quantidade Usada nesta Receita (g ou ml):</label>
+<input type="number" id="ingQtdUsada" value="395">
+</div>
+
+<button onclick="adicionarIngredienteNaLista()">Inserir Ingrediente</button>
+</div>
+</div>
+
+<div class="card">
+<h2>2. Receita em Construção</h2>
+
+<div id="listaIngredientesAtual">
+<p>Nenhum ingrediente adicionado ainda.</p>
+</div>
+
+<div class="border-t pt-4 space-y-3">
+<div>
+<label>Nome da Receita Final:</label>
+<input type="text" id="recNome" placeholder="Ex: Brigadeiro de Panela">
+</div>
+<div>
+<div>
+<label>Rendimento (unidades):</label>
+<input type="number" id="recRendimento" value="20">
+</div>
+<div>
+<label>Lucro Desejado (%):</label>
+<input type="number" id="recLucro" value="200">
+</div>
+</div>
+
+<div>
+<label>Data da Receita:</label>
+<input type="date" id="recData">
+</div>
+
+<div class="custo-acumulado-box">
+<span>Custo acumulado dos ingredientes:</span>
+<span id="custoAcumuladoTexto">R$ 0,00</span>
+</div>
+
+<button onclick="salvarReceitaCompleta()"> Fechar e Salvar Receita</button>
+</div>
+</div>
+
+<div class="card">
+<h2>3. Caderno de Receitas Lalas</h2>
+<div id="cadernoFinal">
+<p>Nenhuma receita fechada no caderno.</p>
+</div>
+</div>
+
+</div>
+</div>
+
+<div id="aba-dashboard" class="container-abas" style="display: none; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+<div id="container-principal">
+
+<div class="card" style="width: 65%; min-width: 350px;">
+<h2>Histórico Financeiro Mensal</h2>
+<div style="max-width: 100%; margin: 0 auto;">
+<canvas id="graficoFinanceiro"></canvas>
+</div>
+</div>
+
+<div class="card" style="width: 32%; min-width: 300px; background-color: #fffaf0; border: 1px solid #feebc8;">
+<h2>Sugestões Inteligentes da Lalas</h2>
+<div id="painelSugestoes" style="font-size: 13px; color: #4a5568; line-height: 1.6;">
+<p style="color: #92c07f; font-style: italic;">Adicione ou edite receitas para ativar a inteligência de preços.</p>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+let ingredientesDaReceitaAtual = [];
+let cadernoDeReceitasGerais = JSON.parse(localStorage.getItem('lalas_caderno')) || [];
+let receitaSendoEditadaIndex = null;
+let meuGrafico = null;
+
+const inNome = document.getElementById('ingNome');
+const inPreco = document.getElementById('ingPreco');
+const inPeso = document.getElementById('ingPesoTotal');
+const inQtd = document.getElementById('ingQtdUsada');
+const divIngredientesAtual = document.getElementById('listaIngredientesAtual');
+const txtCustoAcumulado = document.getElementById('custoAcumuladoTexto');
+
+const recNome = document.getElementById('recNome');
+const recRendimento = document.getElementById('recRendimento');
+const recLucro = document.getElementById('recLucro');
+const recData = document.getElementById('recData');
+const divCadernoFinal = document.getElementById('cadernoFinal');
+const divPainelSugestoes = document.getElementById('painelSugestoes');
+
+// Configura a data padrão do input para o dia de hoje
+recData.value = new Date().toISOString().split('T')[0];
+
+// Inicializa o que já estiver salvo no navegador
+desenharCadernoFinal();
+atualizarGraficoDashboard();
+
+function mudarAba(aba) {
+if (aba === 'calculadora') {
+document.getElementById('aba-calculadora').style.display = 'block';
+document.getElementById('aba-dashboard').style.display = 'none';
+} else {
+document.getElementById('aba-calculadora').style.display = 'none';
+document.getElementById('aba-dashboard').style.display = 'block';
+atualizarGraficoDashboard();
+gerarSugestoesDeNegocio();
+}
+}
+
+function adicionarIngredienteNaLista() {
+const nome = inNome.value.trim();
+const preco = Number(inPreco.value);
+const peso = Number(inPeso.value);
+const qtd = Number(inQtd.value);
+
+if(nome === "" || preco <= 0 || peso <= 0 || qtd <= 0) {
+alert("Preencha os dados do ingrediente corretamente!");
+return;
+}
+
+const custoCalculado = (preco / peso) * qtd;
+const precoPorUnidadeMedida = preco / peso;
+
+// Se redigitar o mesmo ingrediente na mesma receita, ele atualiza o preço antigo pelo novo
+const indexExistente = ingredientesDaReceitaAtual.findIndex(i => i.nome.toLowerCase() === nome.toLowerCase());
+
+const novoIngrediente = {
+nome: nome,
+precoOriginal: preco,
+pesoOriginal: peso,
+qtdUsada: qtd,
+custo: custoCalculado,
+precoPorGrama: precoPorUnidadeMedida
+};
+
+if (indexExistente !== -1) {
+ingredientesDaReceitaAtual[indexExistente] = novoIngrediente;
+} else {
+ingredientesDaReceitaAtual.push(novoIngrediente);
+}
+
+inNome.value = "";
+desenharListaDeIngredientes();
+}
+
+function desenharListaDeIngredientes() {
+divIngredientesAtual.innerHTML = "";
+let somaCusto = 0;
+
+if(ingredientesDaReceitaAtual.length === 0) {
+divIngredientesAtual.innerHTML = "<p>Nenhum ingrediente adicionado ainda.</p>";
+txtCustoAcumulado.innerText = "R$ 0,00";
+return;
+}
+
+ingredientesDaReceitaAtual.forEach(function(ing) {
+somaCusto += ing.custo;
+divIngredientesAtual.innerHTML += `
+<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px;">
+<span>🔹 ${ing.nome}</span>
+<span style="font-weight: 500;">R$ ${ing.custo.toFixed(2)}</span>
+</div>
+`;
+});
+
+txtCustoAcumulado.innerText = `R$ ${somaCusto.toFixed(2)}`;
+}
+
+function salvarReceitaCompleta() {
+const nomeRec = recNome.value;
+const rendimento = Number(recRendimento.value);
+const lucroPorcentagem = Number(recLucro.value);
+const dataEscolhida = recData.value;
+
+if(nomeRec === "" || rendimento <= 0 || lucroPorcentagem <= 0 || ingredientesDaReceitaAtual.length === 0 || dataEscolhida === "") {
+alert("Preencha todos os dados da receita e certifique-se de ter adicionado ingredientes!");
+return;
+}
+
+let custoTotalCalculado = 0;
+ingredientesDaReceitaAtual.forEach(function(ing) {
+custoTotalCalculado += ing.custo;
+});
+
+const custoUnitario = custoTotalCalculado / rendimento;
+const precoVendaUnitario = custoUnitario + (custoUnitario * (lucroPorcentagem / 100));
+const lucroTotalEsperado = (precoVendaUnitario * rendimento) - custoTotalCalculado;
+
+const novaReceita = {
+nome: nomeRec,
+custoTotal: custoTotalCalculado,
+rendimento: rendimento,
+precoVenda: precoVendaUnitario,
+lucroTotal: lucroTotalEsperado,
+lucroOriginalSolicitado: lucroPorcentagem,
+data: dataEscolhida,
+ingredientes: ingredientesDaReceitaAtual
+};
+
+// Se veio de um clique do Lápis (✏️), atualiza a receita no mesmo lugar em vez de criar outra
+if (receitaSendoEditadaIndex !== null) {
+cadernoDeReceitasGerais[receitaSendoEditadaIndex] = novaReceita;
+receitaSendoEditadaIndex = null;
+} else {
+cadernoDeReceitasGerais.push(novaReceita);
+}
+
+localStorage.setItem('lalas_caderno', JSON.stringify(cadernoDeReceitasGerais));
+
+// Reseta a tela de montagem para uma nova receita
+ingredientesDaReceitaAtual = [];
+recNome.value = "";
+recData.value = new Date().toISOString().split('T')[0];
+desenharListaDeIngredientes();
+desenharCadernoFinal();
+alert("Receita processada e arquivada com sucesso!");
+}
+
+function desenharCadernoFinal() {
+divCadernoFinal.innerHTML = "";
+
+if(cadernoDeReceitasGerais.length === 0) {
+divCadernoFinal.innerHTML = '<p style="color: #718096; font-style: italic;">Nenhuma receita fechada no caderno.</p>';
+return;
+}
+
+cadernoDeReceitasGerais.forEach(function(rec, index) {
+const partesData = rec.data ? rec.data.split('-') : ['00', '00', '0000'];
+const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+
+divCadernoFinal.innerHTML += `
+<div style="background-color: #f0fff4; border-left: 4px solid #38a169; padding: 12px; margin-bottom: 12px; border-radius: 4px; position: relative;">
+<span style="font-size: 10px; color: #718096; position: absolute; bottom: 8px; left: 12px;">📅 Data: ${dataFormatada}</span>
+<h3 style="margin: 0 0 5px 0; color: #276749; font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: bold;">${rec.nome}</h3>
+<p style="margin: 0; font-size: 13px; color: #4a5568;">Custo: R$ ${rec.custoTotal.toFixed(2)} | Rendimento: ${rec.rendimento} un</p>
+<p style="margin: 5px 0 20px 0; font-weight: bold; color: #22543d; font-size: 15px;">Preço Sugerido: R$ ${rec.precoVenda.toFixed(2)} / un</p>
+
+<div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
+<button onclick="carregarReceitaParaEdicao(${index})" style="width: auto; background-color: #3182ce; padding: 4px 8px; font-size: 11px; margin: 0; cursor: pointer; border: none; border-radius: 3px; color: white;">✏️</button>
+<button onclick="removerReceitaDoCaderno(${index})" style="width: auto; background-color: #e53e3e; padding: 4px 8px; font-size: 11px; margin: 0; cursor: pointer; border: none; border-radius: 3px; color: white;">❌</button>
+</div>
+</div>
+`;
+});
+}
+
+function carregarReceitaParaEdicao(index) {
+const receita = cadernoDeReceitasGerais[index];
+receitaSendoEditadaIndex = index;
+
+recNome.value = receita.nome;
+recRendimento.value = receita.rendimento;
+recData.value = receita.data || new Date().toISOString().split('T')[0];
+recLucro.value = receita.lucroOriginalSolicitado || 200;
+
+ingredientesDaReceitaAtual = receita.ingredientes || [];
+
+desenharListaDeIngredientes();
+mudarAba('calculadora');
+alert("Dados carregados! Caso queira atualizar o preço de algum ingrediente, basta inseri-lo novamente com o valor atualizado.");
+}
+
+function removerReceitaDoCaderno(index) {
+if(confirm("Tem certeza que deseja apagar esta receita?")) {
+cadernoDeReceitasGerais.splice(index, 1);
+localStorage.setItem('lalas_caderno', JSON.stringify(cadernoDeReceitasGerais));
+desenharCadernoFinal();
+if(document.getElementById('aba-dashboard').style.display === 'block') {
+atualizarGraficoDashboard();
+gerarSugestoesDeNegocio();
+}
+}
+}
+
+// ==========================================================================
+// 🤖 CÁLCULO E AUTOMAÇÃO DA PORCENTAGEM DE LUCRO EXATA
+// ==========================================================================
+function gerarSugestoesDeNegocio() {
+divPainelSugestoes.innerHTML = "";
+
+if (cadernoDeReceitasGerais.length < 2) {
+divPainelSugestoes.innerHTML = `<p style="color: #92c07f; font-weight: 500;">Filtro aguardando dados. Conforme você cadastrar ou atualizar receitas com valores diferentes, as metas automáticas surgirão aqui.</p>`;
+return;
+}
+
+// Agrupa as versões pelo nome exato do doce para ver se o preço mudou
+let historicoPorReceita = {};
+
+cadernoDeReceitasGerais.forEach(function(rec) {
+if(!historicoPorReceita[rec.nome]) {
+historicoPorReceita[rec.nome] = [];
+}
+historicoPorReceita[rec.nome].push(rec);
+});
+
+let gerouAlgumInsight = false;
+
+for (let nomeDaReceita in historicoPorReceita) {
+let versoes = historicoPorReceita[nomeDaReceita];
+
+// Ordena por data (da antiga para a recente)
+versoes.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+if (versoes.length >= 2) {
+let versaoAntiga = versoes[0];
+let versaoRecente = versoes[versoes.length - 1];
+
+let precoVendaAntigo = versaoAntiga.precoVenda;
+let custoUnitarioAtual = versaoRecente.custoTotal / versaoRecente.rendimento;
+
+// Cenário A: O ingrediente baixou e o custo total da receita caiu!
+if (versaoRecente.custoTotal < versaoAntiga.custoTotal) {
+gerouAlgumInsight = true;
+
+// Descobre matematicamente a porcentagem exata para travar o preço antigo
+let lucroExatoNecessario = ((precoVendaAntigo - custoUnitarioAtual) / custoUnitarioAtual) * 100;
+
+divPainelSugestoes.innerHTML += `
+<div style="background-color: #ebf8ff; border-left: 4px solid #3182ce; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+<b style="color: #2b6cb0; font-size: 14px;">📉 Economia no "${nomeDaReceita}"</b><br>
+<p style="margin: 5px 0;">O custo total reduziu de R$ ${versaoAntiga.custoTotal.toFixed(2)} para R$ ${versaoRecente.custoTotal.toFixed(2)}.</p>
+<div style="background-color: #ffffff; padding: 8px; border-radius: 6px; margin: 8px 0; border: 1px dashed #bee3f8; font-weight: bold; color: #2c5282; text-align: center;">
+🎯 PARA MANTER O PREÇO DE R$ ${precoVendaAntigo.toFixed(2)}:<br>
+Ajuste o Lucro Desejado para: <span style="font-size: 16px; color: #3182ce;">${lucroExatoNecessario.toFixed(0)}%</span>
+</div>
+<p style="margin: 0; font-size: 12px; color: #4a5568;">* Fazendo essa alteração, o valor final não muda para o cliente e você absorve toda a margem de lucro criada pela queda dos insumos.</p>
+</div>
+`;
+}
+
+// Cenário B: O ingrediente subiu e o custo aumentou!
+if (versaoRecente.custoTotal > versaoAntiga.custoTotal) {
+gerouAlgumInsight = true;
+let novoPrecoSugerido = custoUnitarioAtual + (custoUnitarioAtual * (versaoRecente.lucroOriginalSolicitado / 100));
+
+divPainelSugestoes.innerHTML += `
+<div style="background-color: #fff5f5; border-left: 4px solid #e53e3e; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+<b style="color: #9b2c2c; font-size: 14px;">🔺 Alta de Custo no "${nomeDaReceita}"</b><br>
+<p style="margin: 5px 0;">Subiu de R$ ${versaoAntiga.custoTotal.toFixed(2)} para R$ ${versaoRecente.custoTotal.toFixed(2)}.</p>
+<div style="background-color: #ffffff; padding: 8px; border-radius: 6px; margin: 8px 0; border: 1px dashed #fed7d7; font-weight: bold; color: #9b2c2c;">
+⚠️ Para manter sua porcentagem original de lucro, o novo preço de venda sugerido deve ser: <b>R$ ${novoPrecoSugerido.toFixed(2)}</b>.
+</div>
+</div>
+`;
+}
+}
+}
+
+if (!gerouAlgumInsight) {
+divPainelSugestoes.innerHTML = `<p style="color: #2f855a; font-weight: 500;">✅ Margens equilibradas! O preço dos ingredientes segue estável entre os registros analisados.</p>`;
+}
+}
+
+// ==========================================================================
+// 📊 FILTRO E CONSTRUÇÃO DO GRÁFICO ADAPTÁVEL
+// ==========================================================================
+function atualizarGraficoDashboard() {
+const resumoMensal = {
+'01': { custo: 0, lucro: 0 }, '02': { custo: 0, lucro: 0 }, '03': { custo: 0, lucro: 0 },
+'04': { custo: 0, lucro: 0 }, '05': { custo: 0, lucro: 0 }, '06': { custo: 0, lucro: 0 },
+'07': { custo: 0, lucro: 0 }, '08': { custo: 0, lucro: 0 }, '09': { custo: 0, lucro: 0 },
+'10': { custo: 0, lucro: 0 }, '11': { custo: 0, lucro: 0 }, '12': { custo: 0, lucro: 0 }
+};
+
+// Aplica o filtro de data acumulando os valores de custo e lucro por mês
+cadernoDeReceitasGerais.forEach(function(rec) {
+if (rec.data) {
+const mes = rec.data.split('-')[1];
+if (resumoMensal[mes]) {
+resumoMensal[mes].custo += rec.custoTotal;
+resumoMensal[mes].lucro += (rec.lucroTotal || 0);
+}
+}
+});
+
+const dadosCustos = [
+resumoMensal['01'].custo, resumoMensal['02'].custo, resumoMensal['03'].custo,
+resumoMensal['04'].custo, resumoMensal['05'].custo, resumoMensal['06'].custo,
+resumoMensal['07'].custo, resumoMensal['08'].custo, resumoMensal['09'].custo,
+resumoMensal['10'].custo, resumoMensal['11'].custo, resumoMensal['12'].custo
+];
+
+const dadosLucros = [
+resumoMensal['01'].lucro, resumoMensal['02'].lucro, resumoMensal['03'].lucro,
+resumoMensal['04'].lucro, resumoMensal['05'].lucro, resumoMensal['06'].lucro,
+resumoMensal['07'].lucro, resumoMensal['08'].lucro, resumoMensal['09'].lucro,
+resumoMensal['10'].lucro, resumoMensal['11'].lucro, resumoMensal['12'].lucro
+];
+
+const ctx = document.getElementById('graficoFinanceiro').getContext('2d');
+
+if (meuGrafico !== null) {
+meuGrafico.destroy();
+}
+
+// O gráfico se expande do zero até o maior valor dinamicamente
+meuGrafico = new Chart(ctx, {
+type: 'line',
+data: {
+labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+datasets: [
+{
+label: 'Custo acumulado (R$)',
+data: dadosCustos,
+borderColor: '#e53e3e',
+backgroundColor: 'transparent',
+borderWidth: 3,
+tension: 0.2
+},
+{
+label: 'Lucro Estimado (R$)',
+data: dadosLucros,
+borderColor: '#38a169',
+backgroundColor: 'transparent',
+borderWidth: 3,
+tension: 0.2
+}
+]
+},
+options: {
+responsive: true,
+plugins: {
+legend: { position: 'top' }
+}
+}
+});
+}
+</script>
+</body>
+</html>

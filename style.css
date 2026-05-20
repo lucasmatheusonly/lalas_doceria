@@ -1,0 +1,163 @@
+/* 1. CONFIGURAÇÃO BASE (Aplica a Poppins para o corpo e textos padrão) */
+body, input, button, label, span {
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #f7e4e8; /* Fundo rosa bem clarinho com tema de doceria */
+
+     /* 1. CHAMANDO A IMAGEM 5 VEZES (Uma para cada doce) */
+    background-image: 
+        url('img/brigadeiro.png'), 
+        url('img/brigadeiro.png'), 
+        url('img/brigadeiro.png'),
+        url('img/brigadeiro.png'),
+        url('img/brigadeiro.png'),
+        url('img/brigadeiro.png');
+    
+    /* 2. PROIBINDO TODOS DE REPETIREM */
+    background-repeat: 
+        no-repeat, 
+        no-repeat, 
+        no-repeat,
+        no-repeat,
+        no-repeat,
+        no-repeat;
+    
+    /* 3. OS 5 LOCAIS ESTRATÉGICOS (Mapeados na tela) */
+    background-position: 
+        left 30px top 30px,       /* 1º Doce: Superior Esquerdo */
+        right 30px top 30px,      /* 2º Doce: Superior Direito (perto do título) */
+        left 30px center,         /* 3º Doce: No meio da tela, na lateral esquerda */
+        right 30px center,        /* 4º Doce: No meio da tela, na lateral direita */
+        right 30px bottom 30px,  /* 5º Doce: Inferior Direito (rodapé) */
+        left 30px bottom 30px;   /* 6º Doce: Inferior Esquerdo (rodapé) */
+    
+    /* 4. DEFINE OS TAMANHOS (Brincando com tamanhos diferentes para dar profundidade) */
+    background-size: 
+        70px,  /* Superior Esquerdo */
+        70px,  /* Superior Direito */
+        70px,   /* Meio Esquerda */
+        70px,  /* Meio Direita */
+        70px,  /* Inferior Direito */
+        70px;  /* Inferior Esquerdo */
+        
+    background-attachment: fixed; /* Mantém os 5 travados na tela enquanto você rola o sistema */
+    margin: 0;
+    padding: 20px;
+}
+
+/* Título principal do topo do aplicativo */
+h1 {
+    font-family: 'Dancing Script', cursive;
+    color: #92c07f;
+    text-align: center;
+    font-size: 60px;
+    margin-bottom: 30px;
+}
+
+/* 2. ALINHAMENTO DO GRUPO DE 3 COLUNAS */
+#container-principal {
+    display: flex;
+    flex-wrap: wrap; /* Se a tela for pequena, as colunas descem sozinhas */
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* 3. ESTILO DOS MEUS CARDS (As colunas brancas) */
+.card {
+    background-color: white;
+    flex: 1; /* Faz as 3 colunas terem larguras iguais */
+    min-width: 300px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(209, 71, 117, 0.08); /* Sombra bem leve puxada pro rosa */
+}
+
+/* Títulos internos de cada uma das 3 colunas (Com a fonte cursiva) */
+.card h2 {
+    font-family: 'Poppins', cursive;
+    color: #92c07f;
+    font-weight: 700;
+    font-size: 32px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #FFE4EC; /* Linha fina divisória abaixo do título */
+    padding-bottom: 8px;
+}
+
+/* Estilo dos textos de apoio (etiquetas) acima dos inputs */
+label {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+/* Estilo das caixas de digitação */
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    box-sizing: border-box; /* Garante que o input respeite as bordas do card */
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+/* Efeito ao clicar para digitar na caixinha */
+input:focus {
+    outline: none;
+    border-color: #92c07f;
+}
+
+/* 4. DESIGN DOS BOTÕES DA LALAS */
+button {
+    width: 100%;
+    background-color: #82bd99; /* Rosa marcante */
+    color: white;
+    border: none;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+button:hover {
+    background-color: #82bd99; /* Escurece um pouco ao passar o mouse */
+    transform: translateY(-1px); /* Sobe um pixel dando efeito de clique */
+}
+
+/* Caixa cinza que exibe o custo acumulado no meio da tela */
+.custo-acumulado-box {
+    background-color: #F8FAFC;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 15px 0;
+    border: 1px solid #E2E8F0;
+}
+
+.custo-acumulado-box span:first-child {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+}
+
+#custoAcumuladoTexto {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1E293B;
+}
+
+/* Espaçamentos auxiliares */
+.space-y-3 > * + * { margin-top: 12px; }
+.pt-4 { padding-top: 16px; }
+.border-t { border-top: 1px solid #E2E8F0; }
